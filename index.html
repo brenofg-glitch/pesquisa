@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veneto — Diagnóstico Patrimonial</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8D5A3;
+    --gold-dark: #8B6914;
+    --ink: #1A1814;
+    --ink-soft: #3D3A33;
+    --ink-muted: #7A7669;
+    --cream: #FAF8F3;
+    --cream-dark: #F0EDE4;
+    --white: #FFFFFF;
+    --border: rgba(201,168,76,0.2);
+    --border-strong: rgba(201,168,76,0.5);
+    --error: #C0392B;
+    --success: #2D6A4F;
+    --shadow: 0 4px 24px rgba(26,24,20,0.08);
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--cream-dark);
+    z-index: 100;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Logo header */
+  .header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 90;
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+  }
+  .logo span { color: var(--gold); }
+  .step-counter {
+    font-size: 13px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* Main container */
+  .form-wrapper {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 24px 24px;
+    overflow: hidden;
+  }
+
+  /* Slide container */
+  .slides-container {
+    width: 100%;
+    max-width: 680px;
+    position: relative;
+    min-height: 340px;
+  }
+
+  /* Individual slide */
+  .slide {
+    position: absolute;
+    width: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(40px);
+    transition: all 0.45s cubic-bezier(0.4,0,0.2,1);
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+    position: relative;
+  }
+  .slide.exit-up {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+
+  /* Question number */
+  .q-num {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .q-num::after {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--gold-light);
+  }
+
+  /* Question text */
+  .q-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .q-hint {
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.6;
+    margin-bottom: 32px;
+    font-style: italic;
+  }
+
+  /* Text input */
+  .text-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--border-strong);
+    padding: 12px 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 18px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.25s;
+    caret-color: var(--gold);
+  }
+  .text-input::placeholder { color: var(--ink-muted); font-weight: 300; }
+  .text-input:focus { border-bottom-color: var(--gold); }
+
+  /* Radio / Checkbox options */
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .option-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink-soft);
+    text-align: left;
+    width: 100%;
+  }
+  .option-btn:hover {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.04);
+    color: var(--ink);
+  }
+  .option-btn.selected {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.08);
+    color: var(--ink);
+  }
+  .option-btn.selected .option-key {
+    background: var(--gold);
+    color: var(--white);
+    border-color: var(--gold);
+  }
+
+  .option-key {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  /* "Outro" input inside option */
+  .outro-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-strong);
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    padding: 2px 0;
+  }
+
+  /* Navigation */
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .btn-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gold);
+    color: var(--white);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-next:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .btn-next:active { transform: translateY(0); }
+  .btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-back {
+    background: transparent;
+    border: 1.5px solid var(--border-strong);
+    color: var(--ink-muted);
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-back:hover { color: var(--ink); border-color: var(--ink-muted); }
+
+  .press-enter {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-left: 4px;
+  }
+
+  /* Error */
+  .error-msg {
+    font-size: 13px;
+    color: var(--error);
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .error-msg.show { opacity: 1; }
+
+  /* Welcome slide */
+  .welcome-content {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .welcome-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 20px;
+  }
+  .welcome-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .welcome-sub {
+    font-size: 16px;
+    color: var(--ink-muted);
+    line-height: 1.7;
+    max-width: 480px;
+    margin: 0 auto 36px;
+  }
+  .divider-gold {
+    width: 40px;
+    height: 2px;
+    background: var(--gold);
+    margin: 0 auto 28px;
+  }
+
+  /* Thank you */
+  .thankyou-content { text-align: center; padding: 20px 0; }
+  .check-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(201,168,76,0.1);
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+  }
+  .check-icon svg { width: 24px; height: 24px; stroke: var(--gold); fill: none; stroke-width: 2.5; }
+
+  /* Loading */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(250,248,243,0.9);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Keyboard hint */
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cream-dark);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    padding: 2px 6px;
+    color: var(--ink-muted);
+  }
+
+  @media (max-width: 480px) {
+    .header { padding: 12px 20px; }
+    .nav { flex-wrap: wrap; }
+    .press-enter { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar">
+  <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+</div>
+
+<div class="header">
+  <div class="logo">VENETO<span>.</span></div>
+  <div class="step-counter" id="stepCounter"></div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <span style="font-size:14px;color:var(--ink-muted)">Enviando suas respostas...</span>
+</div>
+
+<div class="form-wrapper">
+  <div class="slides-container" id="slidesContainer">
+
+    <!-- SLIDE 0: Welcome -->
+    <div class="slide active" data-index="0">
+      <div class="welcome-content">
+        <div class="welcome-eyebrow">Diagnóstico Patrimonial</div>
+        <div class="divider-gold"></div>
+        <h1 class="welcome-title">Vamos entender<br>o seu patrimônio</h1>
+        <p class="welcome-sub">Responda algumas perguntas para que nossa equipe prepare um diagnóstico personalizado da sua situação financeira.</p>
+        <button class="btn-next" onclick="nextSlide()">
+          Começar <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- SLIDE 1: Nome -->
+    <div class="slide" data-index="1" data-field="nome" data-type="text" data-required="true">
+      <div class="q-num">Pergunta 1</div>
+      <h2 class="q-title">Qual é o seu nome completo?</h2>
+      <input type="text" class="text-input" id="campo_nome" placeholder="Digite seu nome completo" autocomplete="name" />
+      <div class="error-msg" id="err_nome">Por favor, informe seu nome.</div>
+      <div class="nav">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+        <span class="press-enter">ou pressione <kbd>Enter ↵</kbd></span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Telefone -->
+    <div class="slide" data-index="2" data-field="telefone" data-type="text" data-required="true">
+      <div class="q-num">Pergunta 2</div>
+      <h2 class="q-title">Qual é o seu telefone de contato?</h2>
+      <p class="q-hint">Inclua o DDD.</p>
+      <input type="tel" class="text-input" id="campo_telefone" placeholder="(00) 00000-0000" />
+      <div class="error-msg" id="err_telefone">Por favor, informe seu telefone.</div>
+      <div class="nav">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+        <span class="press-enter">ou pressione <kbd>Enter ↵</kbd></span>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Motivo do contato (PF/PJ) -->
+    <div class="slide" data-index="3" data-field="tipo_pessoa" data-type="radio" data-required="true">
+      <div class="q-num">Pergunta 3</div>
+      <h2 class="q-title">Qual é o principal motivo do seu contato hoje?</h2>
+      <div class="options-list" id="opts_tipo_pessoa">
+        <button class="option-btn" onclick="selectRadio('tipo_pessoa', 'Pessoa Física', this)">
+          <span class="option-key">A</span> Pessoa Física
+        </button>
+        <button class="option-btn" onclick="selectRadio('tipo_pessoa', 'Pessoa Jurídica', this)">
+          <span class="option-key">B</span> Pessoa Jurídica
+        </button>
+        <button class="option-btn" onclick="selectRadio('tipo_pessoa', 'Pessoa Física e Jurídica', this)">
+          <span class="option-key">C</span> Pessoa Física e Jurídica
+        </button>
+      </div>
+      <div class="error-msg" id="err_tipo_pessoa">Selecione uma opção.</div>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Atuação -->
+    <div class="slide" data-index="4" data-field="atuacao" data-type="radio" data-required="true">
+      <div class="q-num">Pergunta 4</div>
+      <h2 class="q-title">Qual é a sua principal atuação hoje?</h2>
+      <div class="options-list" id="opts_atuacao">
+        <button class="option-btn" onclick="selectRadio('atuacao', 'Empresário (sócio/acionista)', this)">
+          <span class="option-key">A</span> Empresário (sócio/acionista)
+        </button>
+        <button class="option-btn" onclick="selectRadio('atuacao', 'Executivo (C-level, diretor, gerente)', this)">
+          <span class="option-key">B</span> Executivo (C-level, diretor, gerente)
+        </button>
+        <button class="option-btn" onclick="selectRadio('atuacao', 'Profissional da saúde', this)">
+          <span class="option-key">C</span> Profissional da saúde (médico, dentista, veterinário, etc.)
+        </button>
+        <button class="option-btn" onclick="selectRadio('atuacao', 'Profissional do direito', this)">
+          <span class="option-key">D</span> Profissional do direito (advogado, procurador, etc.)
+        </button>
+        <button class="option-btn" onclick="selectRadio('atuacao', 'Artista / Criador', this)">
+          <span class="option-key">E</span> Artista / Criador (músico, ator, influencer, etc.)
+        </button>
+        <button class="option-btn" onclick="selectRadio('atuacao', 'Atleta profissional', this)">
+          <span class="option-key">F</span> Atleta profissional (ou ex-atleta em transição)
+        </button>
+      </div>
+      <div class="error-msg" id="err_atuacao">Selecione uma opção.</div>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Renda mensal -->
+    <div class="slide" data-index="5" data-field="renda_mensal" data-type="radio" data-required="true">
+      <div class="q-num">Pergunta 5</div>
+      <h2 class="q-title">Qual é a sua renda mensal aproximada?</h2>
+      <p class="q-hint">Informe uma estimativa. Se o atendimento envolve o casal, considere a soma das rendas.</p>
+      <div class="options-list" id="opts_renda_mensal">
+        <button class="option-btn" onclick="selectRadio('renda_mensal', 'Até R$ 20 mil', this)">
+          <span class="option-key">A</span> Até R$ 20 mil
+        </button>
+        <button class="option-btn" onclick="selectRadio('renda_mensal', 'R$ 20 mil a R$ 50 mil', this)">
+          <span class="option-key">B</span> R$ 20 mil a R$ 50 mil
+        </button>
+        <button class="option-btn" onclick="selectRadio('renda_mensal', 'R$ 50 mil a R$ 100 mil', this)">
+          <span class="option-key">C</span> R$ 50 mil a R$ 100 mil
+        </button>
+        <button class="option-btn" onclick="selectRadio('renda_mensal', 'Acima de R$ 100 mil', this)">
+          <span class="option-key">D</span> Acima de R$ 100 mil
+        </button>
+      </div>
+      <div class="error-msg" id="err_renda_mensal">Selecione uma opção.</div>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Fontes de renda (checkbox) -->
+    <div class="slide" data-index="6" data-field="fontes_renda" data-type="checkbox" data-required="true">
+      <div class="q-num">Pergunta 6</div>
+      <h2 class="q-title">Quais são as suas principais fontes de renda?</h2>
+      <p class="q-hint">Selecione todas que se aplicam. Se o atendimento envolve o casal, considere as fontes de ambos.</p>
+      <div class="options-list" id="opts_fontes_renda">
+        <button class="option-btn" onclick="toggleCheckbox('fontes_renda', 'Salário / remuneração fixa', this)">
+          <span class="option-key">A</span> Salário / remuneração fixa
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('fontes_renda', 'Bônus / variável', this)">
+          <span class="option-key">B</span> Bônus / variável
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('fontes_renda', 'Honorários profissionais', this)">
+          <span class="option-key">C</span> Honorários profissionais
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('fontes_renda', 'Distribuição de lucros (empresa própria)', this)">
+          <span class="option-key">D</span> Distribuição de lucros (empresa própria)
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('fontes_renda', 'Aluguéis / renda imobiliária', this)">
+          <span class="option-key">E</span> Aluguéis / renda imobiliária
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('fontes_renda', 'Investimentos (juros, dividendos, rendas financeiras)', this)">
+          <span class="option-key">F</span> Investimentos (juros, dividendos, rendas financeiras)
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('fontes_renda', 'outro', this)" id="btn_fontes_outro">
+          <span class="option-key">G</span>
+          <input class="outro-input" id="input_fontes_outro" placeholder="Outro..." onclick="event.stopPropagation()" oninput="updateOutroValue('fontes_renda', this.value)" />
+        </button>
+      </div>
+      <div class="error-msg" id="err_fontes_renda">Selecione ao menos uma opção.</div>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Patrimônio líquido -->
+    <div class="slide" data-index="7" data-field="patrimonio_liquido" data-type="text" data-required="true">
+      <div class="q-num">Pergunta 7</div>
+      <h2 class="q-title">Qual é o seu patrimônio líquido disponível para investir?</h2>
+      <p class="q-hint">Considere valores aplicados em renda fixa, fundos, ações, previdência privada e demais investimentos financeiros. Se o atendimento envolve o casal, considere o patrimônio consolidado.</p>
+      <input type="text" class="text-input" id="campo_patrimonio_liquido" placeholder="Ex: R$ 2 milhões" />
+      <div class="error-msg" id="err_patrimonio_liquido">Por favor, informe seu patrimônio líquido.</div>
+      <div class="nav">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+        <span class="press-enter">ou pressione <kbd>Enter ↵</kbd></span>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Recursos nos próximos 6 meses -->
+    <div class="slide" data-index="8" data-field="recursos_6meses" data-type="radio" data-required="true">
+      <div class="q-num">Pergunta 8</div>
+      <h2 class="q-title">Você espera receber um volume relevante de recursos nos próximos 6 meses?</h2>
+      <p class="q-hint">Informe a faixa estimada, se aplicável.</p>
+      <div class="options-list" id="opts_recursos_6meses">
+        <button class="option-btn" onclick="selectRadio('recursos_6meses', 'Não esperado', this)">
+          <span class="option-key">A</span> Não, não esperado
+        </button>
+        <button class="option-btn" onclick="selectRadio('recursos_6meses', 'Até R$ 5 milhões', this)">
+          <span class="option-key">B</span> Sim — até R$ 5 milhões
+        </button>
+        <button class="option-btn" onclick="selectRadio('recursos_6meses', 'De R$ 5 milhões a R$ 10 milhões', this)">
+          <span class="option-key">C</span> Sim — de R$ 5 milhões a R$ 10 milhões
+        </button>
+        <button class="option-btn" onclick="selectRadio('recursos_6meses', 'De R$ 10 milhões a R$ 50 milhões', this)">
+          <span class="option-key">D</span> Sim — de R$ 10 milhões a R$ 50 milhões
+        </button>
+        <button class="option-btn" onclick="selectRadio('recursos_6meses', 'Acima de R$ 50 milhões', this)">
+          <span class="option-key">E</span> Sim — acima de R$ 50 milhões
+        </button>
+      </div>
+      <div class="error-msg" id="err_recursos_6meses">Selecione uma opção.</div>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: Poupança mensal -->
+    <div class="slide" data-index="9" data-field="poupanca_mensal" data-type="radio" data-required="true">
+      <div class="q-num">Pergunta 9</div>
+      <h2 class="q-title">Quanto você tem conseguido poupar mensalmente?</h2>
+      <p class="q-hint">Informe o valor que você consegue destinar para investimentos ou acumulação. Se o atendimento envolve o casal, considere o valor consolidado.</p>
+      <div class="options-list" id="opts_poupanca_mensal">
+        <button class="option-btn" onclick="selectRadio('poupanca_mensal', 'Até R$ 20 mil', this)">
+          <span class="option-key">A</span> Até R$ 20 mil
+        </button>
+        <button class="option-btn" onclick="selectRadio('poupanca_mensal', 'Entre R$ 20 mil e R$ 50 mil', this)">
+          <span class="option-key">B</span> Entre R$ 20 mil e R$ 50 mil
+        </button>
+        <button class="option-btn" onclick="selectRadio('poupanca_mensal', 'Entre R$ 50 mil e R$ 100 mil', this)">
+          <span class="option-key">C</span> Entre R$ 50 mil e R$ 100 mil
+        </button>
+        <button class="option-btn" onclick="selectRadio('poupanca_mensal', 'Acima de R$ 100 mil', this)">
+          <span class="option-key">D</span> Acima de R$ 100 mil
+        </button>
+      </div>
+      <div class="error-msg" id="err_poupanca_mensal">Selecione uma opção.</div>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 10: Patrimônio imobilizado -->
+    <div class="slide" data-index="10" data-field="patrimonio_imobilizado" data-type="text" data-required="true">
+      <div class="q-num">Pergunta 10</div>
+      <h2 class="q-title">Qual é o valor aproximado do seu patrimônio imobilizado?</h2>
+      <p class="q-hint">Inclua imóveis residenciais e comerciais, terrenos, fazendas, participação em propriedades e outros ativos não financeiros. Se o atendimento envolve o casal, considere o valor consolidado.</p>
+      <input type="text" class="text-input" id="campo_patrimonio_imobilizado" placeholder="Ex: R$ 5 milhões" />
+      <div class="error-msg" id="err_patrimonio_imobilizado">Por favor, informe seu patrimônio imobilizado.</div>
+      <div class="nav">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+        <span class="press-enter">ou pressione <kbd>Enter ↵</kbd></span>
+      </div>
+    </div>
+
+    <!-- SLIDE 11: Prioridades (checkbox) -->
+    <div class="slide" data-index="11" data-field="prioridades" data-type="checkbox" data-required="true">
+      <div class="q-num">Pergunta 11</div>
+      <h2 class="q-title">Quais são suas três maiores prioridades financeiras no momento?</h2>
+      <div class="options-list" id="opts_prioridades">
+        <button class="option-btn" onclick="toggleCheckbox('prioridades', 'Melhorar a performance dos investimentos', this)">
+          <span class="option-key">A</span> Melhorar a performance dos investimentos
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('prioridades', 'Proteger o patrimônio contra riscos', this)">
+          <span class="option-key">B</span> Proteger o patrimônio contra riscos
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('prioridades', 'Estruturar sucessão familiar', this)">
+          <span class="option-key">C</span> Estruturar sucessão familiar
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('prioridades', 'Planejar aposentadoria ou independência financeira', this)">
+          <span class="option-key">D</span> Planejar aposentadoria ou independência financeira
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('prioridades', 'Preparar eventos futuros (compra de imóvel, educação dos filhos)', this)">
+          <span class="option-key">E</span> Preparar eventos futuros (compra de imóvel, educação dos filhos)
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('prioridades', 'Internacionalização de patrimônio', this)">
+          <span class="option-key">F</span> Internacionalização de patrimônio
+        </button>
+        <button class="option-btn" onclick="toggleCheckbox('prioridades', 'outro', this)" id="btn_prioridades_outro">
+          <span class="option-key">G</span>
+          <input class="outro-input" id="input_prioridades_outro" placeholder="Outro..." onclick="event.stopPropagation()" oninput="updateOutroValue('prioridades', this.value)" />
+        </button>
+      </div>
+      <div class="error-msg" id="err_prioridades">Selecione ao menos uma opção.</div>
+      <div class="nav" style="margin-top:20px">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="nextSlide()">OK <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 12: Motivo principal -->
+    <div class="slide" data-index="12" data-field="motivo_consultoria" data-type="text" data-required="true">
+      <div class="q-num">Pergunta 12</div>
+      <h2 class="q-title">Qual é o principal motivo que levou você a buscar uma consultoria de gestão de patrimônio independente agora?</h2>
+      <input type="text" class="text-input" id="campo_motivo_consultoria" placeholder="Descreva em poucas palavras..." />
+      <div class="error-msg" id="err_motivo_consultoria">Por favor, descreva o motivo.</div>
+      <div class="nav">
+        <button class="btn-back" onclick="prevSlide()">← Voltar</button>
+        <button class="btn-next" onclick="submitForm()" id="btnSubmit">Enviar respostas <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- SLIDE 13: Thank you -->
+    <div class="slide" data-index="13">
+      <div class="thankyou-content">
+        <div class="check-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="welcome-eyebrow" style="margin-bottom:12px">Respostas recebidas</div>
+        <h2 class="welcome-title" style="font-size:clamp(24px,4vw,36px)">Obrigado, <span id="nome_display" style="color:var(--gold)"></span>.</h2>
+        <p class="welcome-sub" style="margin-bottom:0">Nossa equipe analisará suas informações e entrará em contato em breve para dar continuidade ao seu diagnóstico patrimonial.</p>
+        <div class="divider-gold" style="margin-top:28px;margin-bottom:0"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── CONFIGURAÇÃO ───────────────────────────────────────────────────────────
+// Cole aqui a URL do seu Google Apps Script após publicar
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbysveoRSVlLrPhuPdPIhc_jjmRadgwn6y_zTpx36mkDBjPryCFomZPhQjLj4tlV04o/exec';
+// ────────────────────────────────────────────────────────────────────────────
+
+let currentSlide = 0;
+const totalQuestions = 12; // slides 1-12
+
+const formData = {
+  nome: '',
+  telefone: '',
+  tipo_pessoa: '',
+  atuacao: '',
+  renda_mensal: '',
+  fontes_renda: [],
+  patrimonio_liquido: '',
+  recursos_6meses: '',
+  poupanca_mensal: '',
+  patrimonio_imobilizado: '',
+  prioridades: [],
+  motivo_consultoria: ''
+};
+
+const checkboxOutros = { fontes_renda: '', prioridades: '' };
+
+function updateProgress() {
+  const total = totalQuestions;
+  const pct = currentSlide === 0 ? 0 : Math.round(((currentSlide - 1) / total) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  if (currentSlide === 0 || currentSlide > totalQuestions) {
+    document.getElementById('stepCounter').textContent = '';
+  } else {
+    document.getElementById('stepCounter').textContent = currentSlide + ' de ' + total;
+  }
+}
+
+function showSlide(index) {
+  const slides = document.querySelectorAll('.slide');
+  slides.forEach((s, i) => {
+    s.classList.remove('active', 'exit-up');
+    if (i === index) s.classList.add('active');
+  });
+  currentSlide = index;
+  updateProgress();
+
+  // Focus first input
+  setTimeout(() => {
+    const active = document.querySelector('.slide.active');
+    if (!active) return;
+    const inp = active.querySelector('.text-input');
+    if (inp) inp.focus();
+  }, 450);
+}
+
+function getSlideField(index) {
+  const slide = document.querySelector('[data-index="' + index + '"]');
+  if (!slide) return null;
+  return {
+    field: slide.dataset.field,
+    type: slide.dataset.type,
+    required: slide.dataset.required === 'true'
+  };
+}
+
+function validate(index) {
+  const info = getSlideField(index);
+  if (!info || !info.required) return true;
+
+  const { field, type } = info;
+  const errEl = document.getElementById('err_' + field);
+
+  if (type === 'text') {
+    const val = document.getElementById('campo_' + field)?.value?.trim();
+    if (!val) {
+      errEl?.classList.add('show');
+      return false;
+    }
+    formData[field] = val;
+    errEl?.classList.remove('show');
+    return true;
+  }
+
+  if (type === 'radio') {
+    if (!formData[field]) {
+      errEl?.classList.add('show');
+      return false;
+    }
+    errEl?.classList.remove('show');
+    return true;
+  }
+
+  if (type === 'checkbox') {
+    const vals = formData[field];
+    if (!Array.isArray(vals) || vals.length === 0) {
+      errEl?.classList.add('show');
+      return false;
+    }
+    errEl?.classList.remove('show');
+    return true;
+  }
+
+  return true;
+}
+
+function nextSlide() {
+  if (currentSlide > 0 && currentSlide <= totalQuestions) {
+    if (!validate(currentSlide)) return;
+  }
+  if (currentSlide < 13) showSlide(currentSlide + 1);
+}
+
+function prevSlide() {
+  if (currentSlide > 0) showSlide(currentSlide - 1);
+}
+
+function selectRadio(field, value, btn) {
+  formData[field] = value;
+  const container = document.getElementById('opts_' + field);
+  container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('err_' + field)?.classList.remove('show');
+  // Auto-advance after short delay
+  setTimeout(nextSlide, 350);
+}
+
+function toggleCheckbox(field, value, btn) {
+  btn.classList.toggle('selected');
+  const arr = formData[field];
+
+  if (value === 'outro') {
+    const inp = btn.querySelector('.outro-input');
+    if (btn.classList.contains('selected')) {
+      inp?.focus();
+      const outroVal = checkboxOutros[field];
+      if (outroVal && !arr.includes(outroVal)) arr.push(outroVal);
+    } else {
+      const outroVal = checkboxOutros[field];
+      formData[field] = arr.filter(v => v !== outroVal);
+      checkboxOutros[field] = '';
+    }
+  } else {
+    const idx = arr.indexOf(value);
+    if (idx === -1) arr.push(value);
+    else arr.splice(idx, 1);
+  }
+  document.getElementById('err_' + field)?.classList.remove('show');
+}
+
+function updateOutroValue(field, value) {
+  const arr = formData[field];
+  const old = checkboxOutros[field];
+  if (old) {
+    const idx = arr.indexOf(old);
+    if (idx !== -1) arr.splice(idx, 1);
+  }
+  checkboxOutros[field] = value;
+  if (value) arr.push(value);
+}
+
+async function submitForm() {
+  if (!validate(12)) return;
+
+  // Collect last field
+  formData.motivo_consultoria = document.getElementById('campo_motivo_consultoria')?.value?.trim();
+
+  // Build payload
+  const payload = {
+    timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+    nome: formData.nome,
+    telefone: formData.telefone,
+    tipo_pessoa: formData.tipo_pessoa,
+    atuacao: formData.atuacao,
+    renda_mensal: formData.renda_mensal,
+    fontes_renda: formData.fontes_renda.join('; '),
+    patrimonio_liquido: formData.patrimonio_liquido,
+    recursos_6meses: formData.recursos_6meses,
+    poupanca_mensal: formData.poupanca_mensal,
+    patrimonio_imobilizado: formData.patrimonio_imobilizado,
+    prioridades: formData.prioridades.join('; '),
+    motivo_consultoria: formData.motivo_consultoria
+  };
+
+  document.getElementById('loadingOverlay').classList.add('show');
+
+  try {
+    const params = new URLSearchParams(payload);
+    await fetch(APPS_SCRIPT_URL + '?' + params.toString(), { mode: 'no-cors' });
+  } catch (e) {
+    console.error('Erro ao enviar:', e);
+  }
+
+  document.getElementById('loadingOverlay').classList.remove('show');
+  document.getElementById('nome_display').textContent = formData.nome.split(' ')[0];
+  showSlide(13);
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('stepCounter').textContent = '';
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  const active = document.querySelector('.slide.active');
+  if (!active) return;
+  const isTextInput = document.activeElement?.classList.contains('text-input') ||
+                      document.activeElement?.classList.contains('outro-input');
+
+  if (e.key === 'Enter' && isTextInput) {
+    e.preventDefault();
+    const idx = parseInt(active.dataset.index);
+    if (idx === 12) submitForm();
+    else nextSlide();
+  }
+
+  // Letter keys for options
+  if (!isTextInput && e.key.match(/^[a-gA-G]$/)) {
+    const key = e.key.toUpperCase();
+    const keys = ['A','B','C','D','E','F','G'];
+    const ki = keys.indexOf(key);
+    if (ki !== -1) {
+      const btns = active.querySelectorAll('.option-btn');
+      if (btns[ki]) btns[ki].click();
+    }
+  }
+});
+
+updateProgress();
+</script>
+</body>
+</html>
